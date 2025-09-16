@@ -1,0 +1,25 @@
+# OCR 프로그램 의존성 라이브러리
+# Python 버전: 3.9.6
+
+# 필수 라이브러리
+pytesseract==0.3.13      # Tesseract OCR 엔진 Python 래퍼
+Pillow==11.3.0           # 이미지 처리 라이브러리 (PIL fork)
+PyMuPDF==1.26.4          # PDF 처리 라이브러리 (fitz)
+
+# 선택적 라이브러리 (성능 향상을 위해 권장)
+numpy>=1.21.0            # 이미지 배열 처리 (PIL/OpenCV와 함께 사용)
+opencv-python>=4.5.0     # 고급 이미지 처리 (선택사항)
+
+# 개발 및 테스트용 라이브러리 (선택사항)
+# pytest>=6.0.0           # 단위 테스트
+# black>=21.0.0            # 코드 포맷팅
+# flake8>=3.8.0            # 코드 품질 검사
+
+# 시스템 요구사항:
+# - Tesseract OCR 엔진이 시스템에 설치되어 있어야 함
+# - macOS: brew install tesseract tesseract-lang
+# - Windows: https://github.com/UB-Mannheim/tesseract/wiki
+# - Linux: sudo apt-get install tesseract-ocr tesseract-ocr-kor
+
+# 설치 명령어:
+# pip install -r requirements.txt
