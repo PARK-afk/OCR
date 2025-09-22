@@ -5,6 +5,26 @@
 # 주요 기능: 이미지 OCR, PDF OCR, 이미지 전처리, 결과 저장
 # =============================================================================
 
+# 🎯 클론 코딩 체크리스트 매핑
+# =====================================
+# STEP 1-2: 프로젝트 초기화 & 기본 윈도우 → Line 9-23 (imports), Line 28-42 (__init__)
+# STEP 3: SimpleOCR 클래스 생성 → Line 25-42 (class 정의 및 초기화)
+# STEP 4: 탭 구조 구현 → Line 44-73 (setup_ui, notebook), Line 75+ (탭 생성)
+# STEP 5: 이미지 로드 기능 → Line 228+ (load_image, display_pil_image)
+# STEP 6: 이미지 표시 기능 → Line 246+ (display_pil_image 구현)
+# STEP 7: 이미지 전처리 기능 → Line 272+ (sharpen_image, enhance_contrast)
+# STEP 8-9: OCR 엔진 연동 → Line 316+ (run_image_ocr)
+# STEP 10: 결과 저장 → Line 450+ (save_result, save_pdf_result)
+# STEP 11-12: PDF 처리 → Line 348+ (load_pdf, run_pdf_ocr, _process_pdf)
+# STEP 13: 진행률 표시 → Line 394+ (_process_pdf 내부 진행률 바)
+# STEP 14: 에러 처리 → Line 515+ (main 함수 try-catch)
+# =====================================
+
+# ★★★ STEP 1-2: 프로젝트 초기화 & 기본 윈도우 생성 ★★★
+# Tkinter 경고 메시지 숨기기 (macOS 호환성)
+import os
+os.environ['TK_SILENCE_DEPRECATION'] = '1'
+
 # GUI 라이브러리 - 사용자 인터페이스 생성을 위한 tkinter 모듈
 import tkinter as tk
 # tkinter 추가 위젯들 - ttk(테마 위젯), filedialog(파일선택), messagebox(메시지박스), scrolledtext(스크롤 텍스트)
@@ -22,8 +42,10 @@ import threading
 # 날짜/시간 처리를 위한 라이브러리 (현재 코드에서는 사용하지 않음)
 from datetime import datetime
 
+# ★★★ STEP 3: SimpleOCR 클래스 생성 ★★★
 # OCR 애플리케이션의 메인 클래스 정의
 class SimpleOCR:
+    # ★★★ STEP 3-1: 클래스 초기화 ★★★
     # 클래스 초기화 메서드 - 프로그램 시작시 호출됨
     def __init__(self, root):
         # tkinter 루트 윈도우 객체 저장
@@ -41,17 +63,23 @@ class SimpleOCR:
         # 사용자 인터페이스 설정 메서드 호출
         self.setup_ui()
 
+    # ★★★ STEP 3-2: UI 설정 메서드 골격 ★★★
     # 전체 사용자 인터페이스 레이아웃 설정 메서드
     def setup_ui(self):
+        # 그리드 가중치 설정을 먼저 설정하여 레이아웃 문제 방지
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+
         # 메인 프레임 생성 - 전체 레이아웃의 기본 컨테이너, 안쪽 여백 10픽셀
         main_frame = ttk.Frame(self.root, padding="10")
         # 메인 프레임을 루트 윈도우에 배치 (0행 0열, 모든 방향으로 확장)
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame.pack(fill='both', expand=True)
 
+        # ★★★ STEP 4-1: 노트북(탭) 컨트롤 생성 ★★★
         # 탭 컨트롤 생성 - 이미지 OCR과 PDF OCR 탭을 관리
         self.notebook = ttk.Notebook(main_frame)
-        # 탭 컨트롤을 메인 프레임에 배치 (0행 0열, 2열 폭, 모든 방향으로 확장)
-        self.notebook.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # 탭 컨트롤을 메인 프레임에 배치 (pack을 사용하여 더 안정적인 레이아웃)
+        self.notebook.pack(fill='both', expand=True)
 
         # 각각의 탭들 생성 메서드 호출
         # 이미지 OCR 탭 설정 메서드 호출
@@ -59,16 +87,11 @@ class SimpleOCR:
         # PDF OCR 탭 설정 메서드 호출
         self.setup_pdf_tab()
 
-        # 그리드 가중치 설정 - 윈도우 크기 변경 시 자동 크기 조정
-        # 루트 윈도우의 0번 열에 가중치 1 지정 (가로 확장)
-        self.root.columnconfigure(0, weight=1)
-        # 루트 윈도우의 0번 행에 가중치 1 지정 (세로 확장)
-        self.root.rowconfigure(0, weight=1)
-        # 메인 프레임의 0번 열에 가중치 1 지정
-        main_frame.columnconfigure(0, weight=1)
-        # 메인 프레임의 0번 행에 가중치 1 지정
-        main_frame.rowconfigure(0, weight=1)
+        # 위젯들이 생성된 후 강제로 GUI 업데이트
+        self.root.update_idletasks()
+        self.root.update()
 
+    # ★★★ STEP 4-2: 이미지 탭 생성 ★★★
     # 이미지 OCR 탭의 레이아웃과 기능들을 설정하는 메서드
     def setup_image_tab(self):
         """이미지 OCR 탭 생성 및 설정"""
@@ -77,72 +100,58 @@ class SimpleOCR:
         # 생성된 프레임을 노트북에 '이미지 OCR'이라는 이름으로 추가
         self.notebook.add(self.image_frame, text="이미지 OCR")
 
+        # 수평 컨테이너 생성 (왼쪽, 오른쪽 영역을 나란히 배치)
+        main_container = ttk.Frame(self.image_frame)
+        main_container.pack(fill='both', expand=True, padx=5, pady=5)
+
         # 왼쪽 영역: 이미지 로드 및 미리보기를 위한 프레임 (레이블과 테두리 포함)
-        left_frame = ttk.LabelFrame(self.image_frame, text="이미지", padding="10")
-        # 왼쪽 프레임을 이미지 탭에 배치 (0행 0열, 여백 5픽셀, 모든 방향 확장)
-        left_frame.grid(row=0, column=0, padx=5, pady=5, sticky=(tk.W, tk.E, tk.N, tk.S))
+        left_frame = ttk.LabelFrame(main_container, text="이미지", padding="10")
+        left_frame.pack(side='left', fill='both', expand=True, padx=(0,5))
 
         # 이미지를 표시할 캔버스 생성 (400x400 픽셀, 흰색 배경)
         self.image_canvas = tk.Canvas(left_frame, width=400, height=400, bg='white')
-        # 캔버스를 왼쪽 프레임에 배치 (0행, 3열 폭, 세로 여백 5픽셀)
-        self.image_canvas.grid(row=0, column=0, columnspan=3, pady=5)
+        self.image_canvas.pack(pady=5)
+
+        # 버튼들을 위한 프레임
+        button_frame = ttk.Frame(left_frame)
+        button_frame.pack(pady=5)
 
         # 이미지 관련 버튼들 생성 및 배치
-        # "이미지 불러오기" 버튼 - 파일에서 이미지를 로드하는 기능
-        ttk.Button(left_frame, text="이미지 불러오기",
-                  command=self.load_image).grid(row=1, column=0, padx=2, pady=5)
-        # "선명하게" 버튼 - 이미지 선명도를 향상시키는 기능
-        ttk.Button(left_frame, text="선명하게",
-                  command=self.sharpen_image).grid(row=1, column=1, padx=2, pady=5)
-        # "대비 강화" 버튼 - 이미지 대비를 강화하는 기능
-        ttk.Button(left_frame, text="대비 강화",
-                  command=self.enhance_contrast).grid(row=1, column=2, padx=2, pady=5)
+        ttk.Button(button_frame, text="이미지 불러오기",
+                  command=self.load_image).pack(side='left', padx=2)
+        ttk.Button(button_frame, text="선명하게",
+                  command=self.sharpen_image).pack(side='left', padx=2)
+        ttk.Button(button_frame, text="대비 강화",
+                  command=self.enhance_contrast).pack(side='left', padx=2)
 
         # 오른쪽 영역: OCR 결과 표시를 위한 프레임
-        right_frame = ttk.LabelFrame(self.image_frame, text="OCR 결과", padding="10")
-        # 오른쪽 프레임을 이미지 탭에 배치 (0행 1열, 여백 5픽셀, 모든 방향 확장)
-        right_frame.grid(row=0, column=1, padx=5, pady=5, sticky=(tk.W, tk.E, tk.N, tk.S))
+        right_frame = ttk.LabelFrame(main_container, text="OCR 결과", padding="10")
+        right_frame.pack(side='left', fill='both', expand=True, padx=(5,0))
 
         # 언어 선택 영역을 위한 서브 프레임
         lang_frame = ttk.Frame(right_frame)
-        # 언어 프레임을 오른쪽 프레임에 배치 (0행 0열, 가로 확장, 세로 여백 5픽셀)
-        lang_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=5)
+        lang_frame.pack(pady=5)
 
-        # "언어:" 레이블 생성 및 배치
-        ttk.Label(lang_frame, text="언어:").grid(row=0, column=0, padx=2)
-        # OCR 언어 선택을 위한 변수 (기본값: 한국어+영어)
+        # "언어:" 레이블과 콤보박스
+        ttk.Label(lang_frame, text="언어:").pack(side='left', padx=2)
         self.language_var = tk.StringVar(value="kor+eng")
-        # 언어 선택 콤보박스 생성 (한국어+영어, 한국어, 영어, 중국어, 일본어 지원)
         self.language_combo = ttk.Combobox(lang_frame, textvariable=self.language_var,
                                           values=['kor+eng', 'kor', 'eng', 'chi_sim', 'jpn'])
-        # 콤보박스를 언어 프레임에 배치 (0행 1열, 가로 여백 2픽셀)
-        self.language_combo.grid(row=0, column=1, padx=2)
+        self.language_combo.pack(side='left', padx=2)
 
-        # "OCR 실행" 버튼 - 선택된 이미지에서 텍스트를 추출하는 기능
+        # "OCR 실행" 버튼
         ttk.Button(right_frame, text="OCR 실행",
-                  command=self.run_image_ocr).grid(row=1, column=0, pady=5)
+                  command=self.run_image_ocr).pack(pady=5)
 
-        # OCR 결과를 표시할 스크롤 가능한 텍스트 영역 (50문자 폭, 20줄 높이)
+        # OCR 결과를 표시할 스크롤 가능한 텍스트 영역
         self.image_result_text = scrolledtext.ScrolledText(right_frame, width=50, height=20)
-        # 결과 텍스트 영역을 오른쪽 프레임에 배치 (2행 0열, 세로 여백 5픽셀, 모든 방향 확장)
-        self.image_result_text.grid(row=2, column=0, pady=5, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.image_result_text.pack(fill='both', expand=True, pady=5)
 
-        # "결과 저장" 버튼 - OCR 결과를 텍스트 파일로 저장하는 기능
+        # "결과 저장" 버튼
         ttk.Button(right_frame, text="결과 저장",
-                  command=self.save_result).grid(row=3, column=0, pady=5)
+                  command=self.save_result).pack(pady=5)
 
-        # 그리드 가중치 설정 - 창 크기 변경 시 적절한 비율로 확장
-        # 이미지 프레임의 0번 열(왼쪽 영역)에 가중치 1
-        self.image_frame.columnconfigure(0, weight=1)
-        # 이미지 프레임의 1번 열(오른쪽 영역)에 가중치 1
-        self.image_frame.columnconfigure(1, weight=1)
-        # 이미지 프레임의 0번 행에 가중치 1
-        self.image_frame.rowconfigure(0, weight=1)
-        # 오른쪽 프레임의 0번 열에 가중치 1
-        right_frame.columnconfigure(0, weight=1)
-        # 오른쪽 프레임의 2번 행(결과 텍스트 영역)에 가중치 1 - 세로로 주로 확장
-        right_frame.rowconfigure(2, weight=1)
-
+    # ★★★ STEP 4-3: PDF 탭 생성 ★★★
     # PDF OCR 탭의 레이아웃과 기능들을 설정하는 메서드
     def setup_pdf_tab(self):
         """PDF OCR 탭 생성 및 설정"""
@@ -153,69 +162,46 @@ class SimpleOCR:
 
         # PDF 파일 선택 영역을 위한 프레임 (레이블과 테두리 포함)
         file_frame = ttk.LabelFrame(self.pdf_frame, text="PDF 파일", padding="10")
-        # 파일 프레임을 PDF 탭에 배치 (0행, 2열 폭, 여백 5픽셀, 가로 확장)
-        file_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5, sticky=(tk.W, tk.E))
+        file_frame.pack(fill='x', padx=5, pady=5)
 
-        # 선택된 PDF 파일 경로를 저장할 변수
+        # 파일 선택 영역
+        file_select_frame = ttk.Frame(file_frame)
+        file_select_frame.pack(fill='x', pady=2)
+
         self.pdf_path_var = tk.StringVar()
-        # PDF 파일 경로를 표시할 입력 필드 (60문자 폭)
-        ttk.Entry(file_frame, textvariable=self.pdf_path_var, width=60).grid(row=0, column=0, padx=2)
-        # "찾아보기" 버튼 - PDF 파일 선택 대화상자를 여는 기능
-        ttk.Button(file_frame, text="찾아보기",
-                  command=self.load_pdf).grid(row=0, column=1, padx=2)
+        ttk.Entry(file_select_frame, textvariable=self.pdf_path_var, width=60).pack(side='left', fill='x', expand=True, padx=(0,5))
+        ttk.Button(file_select_frame, text="찾아보기",
+                  command=self.load_pdf).pack(side='right')
 
         # 페이지 범위 선택을 위한 서브 프레임
         page_frame = ttk.Frame(file_frame)
-        # 페이지 프레임을 파일 프레임에 배치 (1행, 2열 폭, 세로 여백 5픽셀)
-        page_frame.grid(row=1, column=0, columnspan=2, pady=5)
+        page_frame.pack(pady=5)
 
-        # "페이지:" 레이블
-        ttk.Label(page_frame, text="페이지:").grid(row=0, column=0, padx=2)
-        # 시작 페이지 번호를 저장할 변수 (기본값: "1")
+        # 페이지 선택 위젯들
+        ttk.Label(page_frame, text="페이지:").pack(side='left', padx=2)
         self.start_page_var = tk.StringVar(value="1")
-        # 시작 페이지 입력 필드 (5문자 폭)
-        ttk.Entry(page_frame, textvariable=self.start_page_var, width=5).grid(row=0, column=1, padx=2)
-        # "~" 구분 문자 레이블
-        ttk.Label(page_frame, text="~").grid(row=0, column=2, padx=2)
-        # 끝 페이지 번호를 저장할 변수 (기본값: "1")
+        ttk.Entry(page_frame, textvariable=self.start_page_var, width=5).pack(side='left', padx=2)
+        ttk.Label(page_frame, text="~").pack(side='left', padx=2)
         self.end_page_var = tk.StringVar(value="1")
-        # 끝 페이지 입력 필드 (5문자 폭)
-        ttk.Entry(page_frame, textvariable=self.end_page_var, width=5).grid(row=0, column=3, padx=2)
-
-        # "PDF OCR 실행" 버튼 - PDF에서 텍스트를 추출하는 기능
+        ttk.Entry(page_frame, textvariable=self.end_page_var, width=5).pack(side='left', padx=2)
         ttk.Button(page_frame, text="PDF OCR 실행",
-                  command=self.run_pdf_ocr).grid(row=0, column=4, padx=10)
+                  command=self.run_pdf_ocr).pack(side='left', padx=10)
 
-        # PDF 처리 진행률을 표시할 프로그레스 바 (결정된 모드 - 백분율 표시)
+        # PDF 처리 진행률을 표시할 프로그레스 바
         self.pdf_progress = ttk.Progressbar(file_frame, mode='determinate')
-        # 프로그레스 바를 파일 프레임에 배치 (2행, 2열 폭, 가로 확장, 세로 여백 5픽셀)
-        self.pdf_progress.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        self.pdf_progress.pack(fill='x', pady=5)
 
         # PDF OCR 결과 표시를 위한 프레임 (레이블과 테두리 포함)
         result_frame = ttk.LabelFrame(self.pdf_frame, text="PDF OCR 결과", padding="10")
-        # 결과 프레임을 PDF 탭에 배치 (1행, 2열 폭, 여백 5픽셀, 모든 방향 확장)
-        result_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=5, sticky=(tk.W, tk.E, tk.N, tk.S))
+        result_frame.pack(fill='both', expand=True, padx=5, pady=5)
 
-        # PDF OCR 결과를 표시할 스크롤 가능한 텍스트 영역 (80문자 폭, 25줄 높이)
+        # PDF OCR 결과를 표시할 스크롤 가능한 텍스트 영역
         self.pdf_result_text = scrolledtext.ScrolledText(result_frame, width=80, height=25)
-        # 결과 텍스트 영역을 결과 프레임에 배치 (0행 0열, 모든 방향 확장)
-        self.pdf_result_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.pdf_result_text.pack(fill='both', expand=True, pady=(0,5))
 
-        # "결과 저장" 버튼 - PDF OCR 결과를 텍스트 파일로 저장하는 기능
+        # "결과 저장" 버튼
         ttk.Button(result_frame, text="결과 저장",
-                  command=self.save_pdf_result).grid(row=1, column=0, pady=5)
-
-        # 그리드 가중치 설정 - 창 크기 변경 시 적절한 비율로 확장
-        # PDF 프레임의 0번 열에 가중치 1
-        self.pdf_frame.columnconfigure(0, weight=1)
-        # PDF 프레임의 1번 행(결과 영역)에 가중치 1 - 세로로 주로 확장
-        self.pdf_frame.rowconfigure(1, weight=1)
-        # 파일 프레임의 0번 열에 가중치 1
-        file_frame.columnconfigure(0, weight=1)
-        # 결과 프레임의 0번 열에 가중치 1
-        result_frame.columnconfigure(0, weight=1)
-        # 결과 프레임의 0번 행(텍스트 영역)에 가중치 1
-        result_frame.rowconfigure(0, weight=1)
+                  command=self.save_pdf_result).pack(pady=5)
 
     # 이미지 파일을 로드하는 메서드
     def load_image(self):
@@ -262,6 +248,7 @@ class SimpleOCR:
         self.image_canvas.image = photo
 
     # 이미지 선명도를 향상시키는 메서드
+    # ★★★ STEP 7-1: 이미지 선명도 향상 ★★★
     def sharpen_image(self):
         """이미지 선명하게 만들기"""
         # 현재 로드된 이미지가 있는지 확인
@@ -283,6 +270,7 @@ class SimpleOCR:
             messagebox.showerror("오류", f"선명도 처리 실패: {str(e)}")
 
     # 이미지 대비를 강화하는 메서드
+    # ★★★ STEP 7-2: 이미지 대비 강화 ★★★
     def enhance_contrast(self):
         """이미지 대비 강화"""
         # 현재 로드된 이미지가 있는지 확인
@@ -306,6 +294,7 @@ class SimpleOCR:
             messagebox.showerror("오류", f"대비 강화 실패: {str(e)}")
 
     # 이미지에서 OCR을 실행하는 메서드
+    # ★★★ STEP 8-9: OCR 엔진 연동 ★★★
     def run_image_ocr(self):
         """이미지 OCR 실행"""
         # 현재 로드된 이미지가 있는지 확인
@@ -338,6 +327,7 @@ class SimpleOCR:
             messagebox.showerror("오류", f"OCR 실행 실패: {str(e)}")
 
     # PDF 파일을 로드하는 메서드
+    # ★★★ STEP 11-1: PDF 파일 선택 ★★★
     def load_pdf(self):
         """PDF 파일 불러오기"""
         # PDF 파일 선택 대화상자 열기
@@ -352,6 +342,7 @@ class SimpleOCR:
             self.pdf_path_var.set(file_path)
 
     # PDF OCR을 실행하는 메서드 (메인 스레드에서 실행)
+    # ★★★ STEP 12: PDF to Image 변환 ★★★
     def run_pdf_ocr(self):
         """PDF OCR 실행"""
         # 선택된 PDF 파일 경로 가져오기
@@ -380,6 +371,7 @@ class SimpleOCR:
         thread.start()
 
     # PDF를 실제로 처리하는 메서드 (백그라운드 스레드에서 실행)
+    # ★★★ STEP 13: 진행률 표시 ★★★
     def _process_pdf(self, pdf_path, start_page, end_page):
         """PDF 처리 (백그라운드)"""
         try:
@@ -440,6 +432,7 @@ class SimpleOCR:
             self.pdf_progress.config(value=0)
 
     # 이미지 OCR 결과를 파일로 저장하는 메서드
+    # ★★★ STEP 10: 결과 저장 ★★★
     def save_result(self):
         """OCR 결과 저장"""
         # 결과 텍스트 영역에서 모든 텍스트를 가져오고 앞뒤 공백 제거
@@ -470,6 +463,7 @@ class SimpleOCR:
                 messagebox.showerror("오류", f"저장 실패: {str(e)}")
 
     # PDF OCR 결과를 파일로 저장하는 메서드
+    # ★★★ STEP 10: PDF 결과 저장 ★★★
     def save_pdf_result(self):
         """PDF OCR 결과 저장"""
         # PDF 결과 텍스트 영역에서 모든 텍스트를 가져오고 앞뒤 공백 제거
@@ -499,6 +493,7 @@ class SimpleOCR:
                 # 파일 저장 실패 시 오류 메시지 표시
                 messagebox.showerror("오류", f"저장 실패: {str(e)}")
 
+# ★★★ STEP 14: 에러 처리 및 최종 통합 ★★★
 # 프로그램의 메인 함수
 def main():
     try:
