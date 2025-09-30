@@ -64,7 +64,7 @@ pip install -r requirements.txt
 source ocr_env/bin/activate
 
 # 프로그램 실행
-python new.py
+python multilang_ocr.py
 ```
 
 ## 사용 방법
@@ -99,7 +99,7 @@ python new.py
 
 ```
 OCR/
-├── new.py              # 메인 애플리케이션 파일
+├── multilang_ocr.py              # 메인 애플리케이션 파일
 ├── run_ocr.sh          # 실행 스크립트
 ├── requirements.txt    # Python 의존성 패키지 목록
 ├── runtime.txt         # Python 버전 정보
@@ -117,7 +117,7 @@ OCR/
 
 ### Tesseract를 찾을 수 없다는 오류가 발생하는 경우
 
-`new.py` 파일에 Tesseract 실행 파일 경로를 직접 지정:
+`multilang_ocr.py` 파일에 Tesseract 실행 파일 경로를 직접 지정:
 
 ```python
 import pytesseract
