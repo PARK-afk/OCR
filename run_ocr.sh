@@ -3,4 +3,4 @@
 
 cd "$(dirname "$0")"
 source ocr_env/bin/activate
-python new.py
+python multilang_ocr.py
